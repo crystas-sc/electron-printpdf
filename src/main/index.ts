@@ -1,7 +1,9 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import os from 'os'
+import fs from 'fs'
 
 function createWindow(): void {
   // Create the browser window.
@@ -9,7 +11,7 @@ function createWindow(): void {
     width: 900,
     height: 670,
     show: false,
-    autoHideMenuBar: true,
+    // autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -33,6 +35,44 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    // Use default printing options
+    
+  })
+
+  ipcMain.handle('print-page', async (event) => {
+    // const result = await doSomeWork(someArgument)
+    const webContents = event.sender
+    const win = BrowserWindow.fromWebContents(webContents)
+
+
+    const pdfPath = join(os.homedir(), 'temp.pdf')
+    win && win.webContents.printToPDF({}).then(data => {
+      fs.writeFile(pdfPath, data, (error) => {
+        if (error) throw error
+        console.log(`Wrote PDF successfully to ${pdfPath}`)
+      })
+    }).catch(error => {
+      console.log(`Failed to write PDF to ${pdfPath}: `, error)
+    })
+
+    // win && win.webContents.print({
+    //   silent: true,
+    //   // margins:{
+    //   //     marginType : "custom",
+    //   //     left:100,
+    //   //     right:100,
+    //   //     top:100,
+    //   //     bottom:50,
+    //   // },
+    //   // scaleFactor : 3
+
+    // }, (success, failureReason) => {
+    //   console.log("print res", success, failureReason)
+    // })
+
+  })
 }
 
 // This method will be called when Electron has finished
